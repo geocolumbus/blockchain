@@ -8,7 +8,7 @@ Implement transactions - https://www.youtube.com/watch?v=fRV6cGXVQ4I
 console.clear()
 
 const SHA256 = require('crypto-js/sha256')
-const DIFFICULTY = 3
+const DIFFICULTY = 4 // Number of initial zeros required in the hash
 const MINING_REWARD = 5
 
 class Transaction {
@@ -19,7 +19,7 @@ class Transaction {
     }
 
     toString() {
-        return `from: ${this.fromAddress} to: ${this.toAddress} amt: ${this.amount}`
+        return `From ${this.fromAddress} to ${this.toAddress} amt: ${this.amount}`
     }
 }
 
@@ -68,7 +68,7 @@ class Blockchain {
     }
 
     minePendingTransactions({miningRewardAddress}) {
-        const block = new Block({transactions: this.pendingTransactions})
+        const block = new Block({transactions: this.pendingTransactions,previousHash:this.getLatestBlock().hash})
         block.mineBlock({difficulty: this.difficulty})
 
         this.chain.push(block)
@@ -122,7 +122,7 @@ class Blockchain {
         const ampm = hours > 11 ? 'pm' : 'am'
         hours = hours > 12 ? hours - 12 : hours
         const time = `${hours.toString().padStart(2, ' ')}:${date.getMinutes().toString().padStart(2, '0')} ${ampm}`
-        const day = `${date.getMonth() + 1}/${date.getDay().toString().padStart(2, '0')}/${date.getFullYear()}`
+        const day = `${date.getMonth() + 1}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`
         return `${day} ${time}`
     }
 
@@ -130,7 +130,7 @@ class Blockchain {
         let ret = ''
         for (const block of this.chain) {
             const date = new Date(block.timestamp);
-            ret += `${this.formatDate(date)} - `
+            ret += `${this.formatDate(date)} - ${block.hash.substring(0,6)}|${block.previousHash.substring(0,6)} - `
             const tranStrs = []
             for (const transaction of block.transactions) {
                 tranStrs.push(transaction.toString())
@@ -146,23 +146,30 @@ const georgeCoin = new Blockchain()
 
 georgeCoin.minePendingTransactions({miningRewardAddress: 'geocolumbus@gmail.com'})
 
-for (let i = 0; i < 1000; i++) {
+// create coins
+for (let i=0; i<10; i++) {
+    georgeCoin.minePendingTransactions({miningRewardAddress: 'george'})
+}
+
+for (let i = 0; i < 10; i++) {
     const transaction = new Transaction({
         fromAddress: addresses[Math.floor(Math.random() * addresses.length)],
         toAddress: addresses[Math.floor(Math.random() * addresses.length)],
-        amount: Math.floor(Math.random() * 80 + 20)
+        amount: Math.floor(Math.random() * 10)
     })
     if (transaction.fromAddress !== transaction.toAddress) {
         if (georgeCoin.getBalanceOfAddress(transaction.fromAddress) > transaction.amount) {
             georgeCoin.createTransaction(transaction)
+            georgeCoin.minePendingTransactions({miningRewardAddress: 'george'})
         }
-        georgeCoin.minePendingTransactions({miningRewardAddress: 'george'})
     }
 }
 georgeCoin.minePendingTransactions({miningRewardAddress: 'geocolumbus@gmail.com'})
 
-console.log(georgeCoin.toString())
+console.log(`${georgeCoin.toString()}`)
 
-addresses.forEach(address=>{
+addresses.forEach(address => {
     console.log(`${address}: ${georgeCoin.getBalanceOfAddress(address)}`)
 })
+
+console.log(`\nisChainValid = ${georgeCoin.isChainValid()}`)
